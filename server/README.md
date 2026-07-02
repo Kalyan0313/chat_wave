@@ -1,188 +1,62 @@
-# Chat Wave - Backend API
+# Chat Wave - Backend Server
 
-## Part 1: Backend Foundation Complete ✅
-## Part 2: Real-time Communication Setup Complete ✅
+This is the backend service for Chat Wave, providing a REST API and Socket.IO real-time messaging capabilities.
 
-### Features Implemented:
+## Architecture & Design Decisions
 
-#### Part 1 - Backend Foundation:
-- ✅ User Registration with validation
-- ✅ User Login with JWT authentication
-- ✅ Password hashing with bcrypt
-- ✅ User profile management
-- ✅ Get all users endpoint
-- ✅ JWT middleware for protected routes
-- ✅ Input validation with express-validator
-- ✅ Database models (User, Chat, Message)
-- ✅ Socket.IO basic setup
-- ✅ Error handling middleware
+- **Database & Indexing:** Uses MongoDB with Mongoose. Fields frequently queried (like chat lookups and message timestamps) are indexed for speed.
+- **In-Memory Caching:** Includes a lightweight caching layer for session and configuration data to reduce database hits.
+- **Real-time Engine:** Built on Socket.IO. Currently configured for single-instance scale, but can be scaled horizontally with a Redis adapter.
+- **Graceful Shutdown:** Cleans up database connections, active socket connections, and server listeners when receiving termination signals (SIGINT/SIGTERM).
 
-#### Part 2 - Real-time Communication:
-- ✅ Complete Chat Management System
-- ✅ Real-time Messaging with Socket.IO
-- ✅ Online/Offline Status Tracking
-- ✅ Message Broadcasting
-- ✅ Typing Indicators
-- ✅ Message Read Status
-- ✅ Group Chat Functionality
-- ✅ Message Search
-- ✅ Unread Message Count
-- ✅ Socket.IO Authentication
+## Setup & Run
 
-### API Endpoints:
-
-#### User Routes:
-- `POST /api/v1/users/register` - Register a new user
-- `POST /api/v1/users/login` - Login user
-- `GET /api/v1/users/users` - Get all users (protected)
-- `GET /api/v1/users/online` - Get online users (protected)
-- `PUT /api/v1/users/profile` - Update user profile (protected)
-
-#### Chat Routes (all protected):
-- `POST /api/v1/chats` - Create or get one-on-one chat
-- `GET /api/v1/chats` - Get all chats for user
-- `POST /api/v1/chats/group` - Create group chat
-- `PUT /api/v1/chats/group/rename` - Rename group chat
-- `PUT /api/v1/chats/group/add-user` - Add user to group
-- `PUT /api/v1/chats/group/remove-user` - Remove user from group
-
-#### Message Routes (all protected):
-- `POST /api/v1/messages` - Send a message
-- `GET /api/v1/messages/:chatId` - Get messages for a chat
-- `PUT /api/v1/messages/mark-read` - Mark messages as read
-- `GET /api/v1/messages/unread/count` - Get unread message count
-- `GET /api/v1/messages/search` - Search messages
-
-### Setup Instructions:
-
-1. **Install Dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Create .env file:**
-   ```env
-   # Server Configuration
-   PORT=3002
-   NODE_ENV=development
-
-   # Database Configuration
-   MongoDB_URI=mongodb://localhost:27017/chat_wave
-
-   # JWT Configuration
-   JWT_SECRET=your_super_secret_jwt_key_here_change_this_in_production
-
-   # Client URL (for CORS)
-   CLIENT_URL=http://localhost:5173
-   ```
-
-   **⚠️ CRITICAL:** You must create this `.env` file manually in the `server` directory for the application to work!
-
-3. **Start MongoDB:**
-   Make sure MongoDB is running on your system
-
-4. **Run the server:**
-   ```bash
-   npm run dev
-   ```
-
-### Testing the API:
-
-#### Register a new user:
+### 1. Install Dependencies
 ```bash
-curl -X POST http://localhost:3002/api/v1/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "Password123"
-  }'
+npm install
 ```
 
-#### Login:
+### 2. Configure Environment Variables
+Create a `.env` file in the root of the server directory. You can use `.env.example` as a template:
 ```bash
-curl -X POST http://localhost:3002/api/v1/users/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "Password123"
-  }'
+cp .env.example .env
 ```
 
-#### Get all users (with JWT token):
+Ensure the following variables are defined:
+- `PORT`: Server port (defaults to `3002`)
+- `MongoDB_URI`: Connection string for MongoDB (local or Atlas)
+- `JWT_SECRET`: Secret key used to sign JSON Web Tokens
+- `CLIENT_URL`: URL of the client application (for CORS configuration)
+
+### 3. Start the Server
+
+**Development Mode (auto-reloads on file changes):**
 ```bash
-curl -X GET http://localhost:3002/api/v1/users/users \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+npm run dev
 ```
 
-#### Create a chat:
+**Production Mode:**
 ```bash
-curl -X POST http://localhost:3002/api/v1/chats \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "USER_ID_TO_CHAT_WITH"
-  }'
+npm start
 ```
 
-#### Send a message:
-```bash
-curl -X POST http://localhost:3002/api/v1/messages \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Hello, how are you?",
-    "chatId": "CHAT_ID"
-  }'
-```
+## API & Testing
 
-### Database Models:
+### Health & Metrics
+- `GET /health` - Returns 200 OK if the server is healthy and connected to MongoDB.
+- `GET /metrics` - Returns basic server metrics (memory usage, active socket connections, uptime).
 
-#### User Model:
-- name, email, password (hashed)
-- profile_img, status (online/offline)
-- lastSeen, isActive
-- timestamps
+### Rate Limits
+The server enforces rate limiting to prevent spam and abuse:
+- **General API:** 100 requests per 15 minutes per IP.
+- **Authentication:** 5 login/registration requests per 15 minutes per IP.
+- **Messages:** 30 messages per minute per user.
+- **Uploads:** 10 file uploads per hour per user.
 
-#### Chat Model:
-- chatName, isGroupChat
-- users (array of user IDs)
-- latestMessage, groupAdmin
-- timestamps
+## Troubleshooting
 
-#### Message Model:
-- sender, content, chat
-- readBy (array of user IDs)
-- messageType (text/image/file/audio)
-- fileUrl, fileName, fileSize
-- timestamps
+### Port already in use
+If you see an error like `EADDRINUSE`, the port (default `3002`) is being used by another process. You can change the port in your `.env` file or kill the existing process.
 
-### Socket.IO Events:
-
-#### Client to Server:
-- `authenticate` - Authenticate user with JWT token
-- `join_chat` - Join a chat room
-- `leave_chat` - Leave a chat room
-- `send_message` - Send a message
-- `typing_start` - Start typing indicator
-- `typing_stop` - Stop typing indicator
-- `mark_messages_read` - Mark messages as read
-
-#### Server to Client:
-- `authenticated` - Authentication successful
-- `auth_error` - Authentication failed
-- `new_message` - New message received
-- `message_notification` - Message notification
-- `user_typing` - User is typing
-- `user_stopped_typing` - User stopped typing
-- `messages_read` - Messages marked as read
-- `user_online` - User came online
-- `user_offline` - User went offline
-- `error` - Error occurred
-
-### Next Steps (Part 3):
-- React frontend setup
-- Authentication UI
-- Chat interface
-- Real-time messaging UI
-- User management interface
+### MongoDB Connection Failures
+Ensure that your MongoDB daemon is running locally (`mongod`) or that your network has access to the Atlas cluster configured in your `MongoDB_URI`.

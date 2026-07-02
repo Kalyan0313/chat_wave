@@ -1,29 +1,15 @@
 const UserModel = require("../models/userModel");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { validationResult } = require("express-validator");
+const cacheService = require("../services/cacheService");
 
-// Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// Register User
 async function RegisterUser(req, res) {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: false,
-        message: "Validation failed",
-        errors: errors.array()
-      });
-    }
-
     const { name, email, password, profile_img } = req.body;
     
-    // Check if user already exists
     const existEmail = await UserModel.findOne({ email });
     if (existEmail) {
       return res.status(400).json({
@@ -32,24 +18,14 @@ async function RegisterUser(req, res) {
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create new user
-    const newUserInfo = {
+    const user = await UserModel.create({
       name,
       email,
       profile_img: profile_img || "",
-      password: hashedPassword,
-    };
-    
-    const user = await UserModel.create(newUserInfo);
-    
-    // Generate token
+      password,
+    });
     const token = generateToken(user._id);
 
-    // Remove password from response
     const userResponse = {
       _id: user._id,
       name: user.name,
@@ -66,7 +42,7 @@ async function RegisterUser(req, res) {
       token
     });
   } catch (error) {
-    console.log("Error in register:", error);
+    console.error("Error in register:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -74,22 +50,10 @@ async function RegisterUser(req, res) {
   }
 }
 
-// Login User
 async function LoginUser(req, res) {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        status: false,
-        message: "Validation failed",
-        errors: errors.array()
-      });
-    }
-
     const { email, password } = req.body;
 
-    // Find user by email
     const user = await UserModel.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -98,8 +62,7 @@ async function LoginUser(req, res) {
       });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         status: false,
@@ -107,16 +70,13 @@ async function LoginUser(req, res) {
       });
     }
 
-    // Update user status to online
     await UserModel.findByIdAndUpdate(user._id, { 
       status: 'online',
       lastSeen: new Date()
     });
 
-    // Generate token
     const token = generateToken(user._id);
 
-    // Remove password from response
     const userResponse = {
       _id: user._id,
       name: user.name,
@@ -133,7 +93,7 @@ async function LoginUser(req, res) {
       token
     });
   } catch (error) {
-    console.log("Error in login:", error);
+    console.error("Error in login:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -141,10 +101,14 @@ async function LoginUser(req, res) {
   }
 }
 
-// Get all users (for chat selection)
 async function GetAllUsers(req, res) {
   try {
-    const users = await UserModel.find({ isActive: true })
+    const userId = req.user.userId;
+    
+    const users = await UserModel.find({ 
+      isActive: true,
+      _id: { $ne: userId }
+    })
       .select("-password")
       .sort({ name: 1 });
 
@@ -154,7 +118,7 @@ async function GetAllUsers(req, res) {
       users
     });
   } catch (error) {
-    console.log("Error fetching users:", error);
+    console.error("Error fetching users:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -162,15 +126,20 @@ async function GetAllUsers(req, res) {
   }
 }
 
-// Update user profile
 async function UpdateProfile(req, res) {
   try {
-    const { name, profile_img } = req.body;
+
+    const { name, profile_img, bio } = req.body;
     const userId = req.user.userId;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (profile_img !== undefined) updateData.profile_img = profile_img;
+    if (bio !== undefined) updateData.bio = bio;
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { name, profile_img },
+      updateData,
       { new: true, select: "-password" }
     );
 
@@ -187,7 +156,7 @@ async function UpdateProfile(req, res) {
       userInfo: updatedUser
     });
   } catch (error) {
-    console.log("Error updating profile:", error);
+    console.error("Error updating profile:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -195,12 +164,20 @@ async function UpdateProfile(req, res) {
   }
 }
 
-// Get online users
 async function GetOnlineUsers(req, res) {
   try {
-    // This will be enhanced when we integrate with Socket.IO service
+    const onlineUserIds = await cacheService.getOnlineUsers();
+    
+    if (onlineUserIds.length === 0) {
+      return res.status(200).json({
+        status: true,
+        message: "Online users fetched successfully",
+        onlineUsers: []
+      });
+    }
+
     const onlineUsers = await UserModel.find({ 
-      status: 'online',
+      _id: { $in: onlineUserIds },
       isActive: true 
     }).select("-password");
 
@@ -210,7 +187,7 @@ async function GetOnlineUsers(req, res) {
       onlineUsers
     });
   } catch (error) {
-    console.log("Error fetching online users:", error);
+    console.error("Error fetching online users:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -218,7 +195,6 @@ async function GetOnlineUsers(req, res) {
   }
 }
 
-// Search users
 async function SearchUsers(req, res) {
   try {
     const { query } = req.query;
@@ -249,7 +225,7 @@ async function SearchUsers(req, res) {
       users
     });
   } catch (error) {
-    console.log("Error searching users:", error);
+    console.error("Error searching users:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -257,13 +233,12 @@ async function SearchUsers(req, res) {
   }
 }
 
-// Update User
 async function UpdateUser(req, res) {
   try {
+
     const { name, email, bio, profile_img } = req.body;
     const userId = req.user.userId;
 
-    // Check if email is being changed and if it already exists
     if (email) {
       const existingUser = await UserModel.findOne({ email, _id: { $ne: userId } });
       if (existingUser) {
@@ -274,7 +249,6 @@ async function UpdateUser(req, res) {
       }
     }
 
-    // Update user data
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
@@ -300,7 +274,7 @@ async function UpdateUser(req, res) {
       userInfo: updatedUser
     });
   } catch (error) {
-    console.log("Error updating user:", error);
+    console.error("Error updating user:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"

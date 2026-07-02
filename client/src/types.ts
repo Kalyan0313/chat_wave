@@ -69,4 +69,5 @@ export interface ChatState {
   loading: boolean;
   error: string | null;
   typingUsers: TypingUser[];
+  socketConnected: boolean;
 }

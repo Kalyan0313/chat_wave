@@ -1,7 +1,6 @@
 const ChatModel = require("../models/chatModel");
 const UserModel = require("../models/userModel");
 
-// Create or get one-on-one chat
 async function createOrGetChat(req, res) {
   try {
     const { userId } = req.body;
@@ -21,7 +20,6 @@ async function createOrGetChat(req, res) {
       });
     }
 
-    // Check if chat already exists
     let chat = await ChatModel.findOne({
       isGroupChat: false,
       users: { $all: [currentUserId, userId] }
@@ -37,9 +35,8 @@ async function createOrGetChat(req, res) {
       });
     }
 
-    // Create new chat
     const newChat = await ChatModel.create({
-      chatName: "sender",
+      chatName: "",
       isGroupChat: false,
       users: [currentUserId, userId]
     });
@@ -53,7 +50,7 @@ async function createOrGetChat(req, res) {
       chat: fullChat
     });
   } catch (error) {
-    console.log("Error creating chat:", error);
+    console.error("Error creating chat:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -61,7 +58,6 @@ async function createOrGetChat(req, res) {
   }
 }
 
-// Get all chats for a user
 async function getUserChats(req, res) {
   try {
     const userId = req.user.userId;
@@ -78,7 +74,7 @@ async function getUserChats(req, res) {
       chats
     });
   } catch (error) {
-    console.log("Error fetching chats:", error);
+    console.error("Error fetching chats:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -86,7 +82,6 @@ async function getUserChats(req, res) {
   }
 }
 
-// Create group chat
 async function createGroupChat(req, res) {
   try {
     const { chatName, users } = req.body;
@@ -99,20 +94,49 @@ async function createGroupChat(req, res) {
       });
     }
 
-    if (users.length < 2) {
+    // Validate chat name
+    if (typeof chatName !== 'string' || chatName.trim().length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Chat name cannot be empty"
+      });
+    }
+
+    if (chatName.trim().length > 100) {
+      return res.status(400).json({
+        status: false,
+        message: "Chat name cannot exceed 100 characters"
+      });
+    }
+
+    if (!Array.isArray(users) || users.length < 2) {
       return res.status(400).json({
         status: false,
         message: "Group chat must have at least 2 users"
       });
     }
 
-    // Add current user to the group
-    users.push(currentUserId);
+    const validUsers = await UserModel.find({ _id: { $in: users }, isActive: true });
+    if (validUsers.length !== users.length) {
+      return res.status(400).json({
+        status: false,
+        message: "One or more users are invalid or inactive"
+      });
+    }
+
+    const uniqueUsers = [...new Set([...users, currentUserId])];
+    
+    if (uniqueUsers.length < 3) {
+      return res.status(400).json({
+        status: false,
+        message: "Group chat must have at least 2 other users (excluding yourself)"
+      });
+    }
 
     const groupChat = await ChatModel.create({
-      chatName,
+      chatName: chatName.trim(),
       isGroupChat: true,
-      users,
+      users: uniqueUsers,
       groupAdmin: currentUserId
     });
 
@@ -126,7 +150,7 @@ async function createGroupChat(req, res) {
       chat: fullGroupChat
     });
   } catch (error) {
-    console.log("Error creating group chat:", error);
+    console.error("Error creating group chat:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -134,7 +158,6 @@ async function createGroupChat(req, res) {
   }
 }
 
-// Rename group chat
 async function renameGroupChat(req, res) {
   try {
     const { chatId, chatName } = req.body;
@@ -147,20 +170,50 @@ async function renameGroupChat(req, res) {
       });
     }
 
-    const updatedChat = await ChatModel.findByIdAndUpdate(
-      chatId,
-      { chatName },
-      { new: true }
-    )
-      .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+    // Validate chat name
+    if (typeof chatName !== 'string' || chatName.trim().length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Chat name cannot be empty"
+      });
+    }
 
-    if (!updatedChat) {
+    if (chatName.trim().length > 100) {
+      return res.status(400).json({
+        status: false,
+        message: "Chat name cannot exceed 100 characters"
+      });
+    }
+
+    const chat = await ChatModel.findById(chatId);
+    if (!chat) {
       return res.status(404).json({
         status: false,
         message: "Chat not found"
       });
     }
+
+    if (!chat.isGroupChat) {
+      return res.status(400).json({
+        status: false,
+        message: "This is not a group chat"
+      });
+    }
+
+    if (chat.groupAdmin.toString() !== currentUserId) {
+      return res.status(403).json({
+        status: false,
+        message: "Only group admin can rename the chat"
+      });
+    }
+
+    const updatedChat = await ChatModel.findByIdAndUpdate(
+      chatId,
+      { chatName: chatName.trim() },
+      { new: true }
+    )
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password");
 
     res.status(200).json({
       status: true,
@@ -168,7 +221,7 @@ async function renameGroupChat(req, res) {
       chat: updatedChat
     });
   } catch (error) {
-    console.log("Error renaming group chat:", error);
+    console.error("Error renaming group chat:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -176,7 +229,6 @@ async function renameGroupChat(req, res) {
   }
 }
 
-// Add user to group
 async function addUserToGroup(req, res) {
   try {
     const { chatId, userId } = req.body;
@@ -197,6 +249,13 @@ async function addUserToGroup(req, res) {
       });
     }
 
+    if (!chat.isGroupChat) {
+      return res.status(400).json({
+        status: false,
+        message: "This is not a group chat"
+      });
+    }
+
     if (chat.groupAdmin.toString() !== currentUserId) {
       return res.status(403).json({
         status: false,
@@ -208,6 +267,14 @@ async function addUserToGroup(req, res) {
       return res.status(400).json({
         status: false,
         message: "User already in group"
+      });
+    }
+
+    const userToAdd = await UserModel.findById(userId);
+    if (!userToAdd || !userToAdd.isActive) {
+      return res.status(400).json({
+        status: false,
+        message: "User not found or inactive"
       });
     }
 
@@ -225,7 +292,7 @@ async function addUserToGroup(req, res) {
       chat: updatedChat
     });
   } catch (error) {
-    console.log("Error adding user to group:", error);
+    console.error("Error adding user to group:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -233,7 +300,6 @@ async function addUserToGroup(req, res) {
   }
 }
 
-// Remove user from group
 async function removeUserFromGroup(req, res) {
   try {
     const { chatId, userId } = req.body;
@@ -254,10 +320,38 @@ async function removeUserFromGroup(req, res) {
       });
     }
 
+    if (!chat.isGroupChat) {
+      return res.status(400).json({
+        status: false,
+        message: "This is not a group chat"
+      });
+    }
+
     if (chat.groupAdmin.toString() !== currentUserId) {
       return res.status(403).json({
         status: false,
         message: "Only group admin can remove users"
+      });
+    }
+
+    if (userId === currentUserId || userId === chat.groupAdmin.toString()) {
+      return res.status(400).json({
+        status: false,
+        message: "Cannot remove group admin from the group"
+      });
+    }
+
+    if (chat.users.length <= 2) {
+      return res.status(400).json({
+        status: false,
+        message: "Group must have at least 2 members"
+      });
+    }
+
+    if (!chat.users.includes(userId)) {
+      return res.status(400).json({
+        status: false,
+        message: "User is not in this group"
       });
     }
 
@@ -275,7 +369,7 @@ async function removeUserFromGroup(req, res) {
       chat: updatedChat
     });
   } catch (error) {
-    console.log("Error removing user from group:", error);
+    console.error("Error removing user from group:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"

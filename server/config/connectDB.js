@@ -2,18 +2,20 @@ const mongoose = require("mongoose");
 require('dotenv').config();
 
 const connectDB = async () => {
-  try {
-    const dbURI = process.env.MongoDB_URI;
-    if (!dbURI) {
-      throw new Error("MongoDB_URI is not defined in environment variables");
-    }
-    
-    await mongoose.connect(dbURI);
-    console.log("✅ MongoDB connected successfully");
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error.message);
-    process.exit(1);
+  const dbURI = process.env.MongoDB_URI;
+  if (!dbURI) {
+    throw new Error("MongoDB_URI is not defined in environment variables");
   }
+
+  await mongoose.connect(dbURI, {
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    socketTimeoutMS: 45000,
+    serverSelectionTimeoutMS: 5000,
+    family: 4
+  });
+
+  console.log("MongoDB connected successfully");
 };
 
 module.exports = connectDB;

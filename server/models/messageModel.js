@@ -8,7 +8,7 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: function() {
+    required: function () {
       return !this.fileUrl; // Content is required if no file
     },
     trim: true,
@@ -45,8 +45,10 @@ const messageSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-messageSchema.index({ chat: 1, createdAt: 1 });
-messageSchema.index({ sender: 1 });
-messageSchema.index({ messageType: 1 });
+messageSchema.index({ chat: 1, createdAt: -1 }); // Most common query: messages by chat, sorted by time
+messageSchema.index({ chat: 1, createdAt: -1, readBy: 1 }); // For unread messages queries
+messageSchema.index({ sender: 1, createdAt: -1 }); // For user's message history
+messageSchema.index({ messageType: 1 }); // For filtering by message type
+messageSchema.index({ chat: 1, sender: 1 }); // For chat-specific user messages
 
 module.exports = mongoose.model("Message", messageSchema);

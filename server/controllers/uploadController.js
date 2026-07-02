@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
 
-// Upload file
 async function uploadFile(req, res) {
   try {
     if (!req.file) {
@@ -13,8 +12,6 @@ async function uploadFile(req, res) {
 
     const file = req.file;
     const fileUrl = `/uploads/${file.filename}`;
-    
-    // Get file type based on extension
     const fileExtension = path.extname(file.originalname).toLowerCase();
     let messageType = 'file';
     
@@ -41,7 +38,7 @@ async function uploadFile(req, res) {
       }
     });
   } catch (error) {
-    console.log("Error uploading file:", error);
+    console.error("Error uploading file:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -49,27 +46,46 @@ async function uploadFile(req, res) {
   }
 }
 
-// Delete file
 async function deleteFile(req, res) {
   try {
     const { filename } = req.params;
-    const filePath = path.join(__dirname, '../uploads', filename);
     
-    // Check if file exists
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid filename"
+      });
+    }
+    
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const filePath = path.join(__dirname, '../uploads', sanitizedFilename);
+    const uploadsDir = path.resolve(__dirname, '../uploads');
+    const resolvedPath = path.resolve(filePath);
+    
+    if (!resolvedPath.startsWith(uploadsDir)) {
+      return res.status(403).json({
+        status: false,
+        message: "Access denied"
+      });
+    }
+    
+    try {
+      await fs.promises.unlink(filePath);
       res.status(200).json({
         status: true,
         message: "File deleted successfully"
       });
-    } else {
-      res.status(404).json({
-        status: false,
-        message: "File not found"
-      });
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return res.status(404).json({
+          status: false,
+          message: "File not found"
+        });
+      }
+      throw err;
     }
   } catch (error) {
-    console.log("Error deleting file:", error);
+    console.error("Error deleting file:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"

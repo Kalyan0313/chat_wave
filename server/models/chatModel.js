@@ -28,8 +28,9 @@ const chatSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-chatSchema.index({ users: 1 });
-chatSchema.index({ isGroupChat: 1 });
-chatSchema.index({ updatedAt: -1 });
+chatSchema.index({ users: 1, updatedAt: -1 }); // User's chats sorted by recent activity
+chatSchema.index({ isGroupChat: 1, updatedAt: -1 }); // Filter group/direct chats
+chatSchema.index({ users: 1, isGroupChat: 1 }); // Combined filter
+chatSchema.index({ updatedAt: -1 }); // Sort by recent activity
 
 module.exports = mongoose.model("Chat", chatSchema);

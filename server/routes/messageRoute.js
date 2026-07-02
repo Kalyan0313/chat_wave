@@ -7,6 +7,8 @@ const {
   searchMessages 
 } = require('../controllers/messageController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { validateObjectId } = require('../middleware/validationMiddleware');
+const { messageLimiter } = require('../middleware/rateLimiter');
 
 const messageRouter = express.Router();
 
@@ -14,10 +16,10 @@ const messageRouter = express.Router();
 messageRouter.use(authenticateToken);
 
 // Message routes
-messageRouter.post('/', sendMessage); // Send a message
+messageRouter.post('/', messageLimiter, sendMessage); // Send a message
 messageRouter.get('/search', searchMessages); // Search messages
 messageRouter.get('/unread/count', getUnreadCount); // Get unread message count
 messageRouter.put('/mark-read', markMessagesAsRead); // Mark messages as read
-messageRouter.get('/:chatId', getMessages); // Get messages for a chat
+messageRouter.get('/:chatId', validateObjectId('chatId'), getMessages); // Get messages for a chat
 
 module.exports = messageRouter;

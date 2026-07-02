@@ -11,6 +11,7 @@ const initialState: ChatState = {
   typingUsers: [],
   loading: false,
   error: null,
+  socketConnected: false,
 };
 
 // Async thunks
@@ -183,6 +184,9 @@ const chatSlice = createSlice({
     clearMessages: (state) => {
       state.messages = [];
     },
+    setSocketConnected: (state, action: PayloadAction<boolean>) => {
+      state.socketConnected = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -267,6 +271,7 @@ export const {
   updateUserStatus,
   clearError,
   clearMessages,
+  setSocketConnected,
 } = chatSlice.actions;
 
 

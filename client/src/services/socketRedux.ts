@@ -1,79 +1,130 @@
 import { io, Socket } from 'socket.io-client';
 import { store } from '../store/store';
-import { addMessage, addTypingUser, removeTypingUser, updateUserStatus } from '../store/slices/chatSlice';
+import { addMessage, addTypingUser, removeTypingUser, updateUserStatus, setSocketConnected } from '../store/slices/chatSlice';
 import { logout } from '../store/slices/authSlice';
 import { Message } from '../types';
 import notificationService from './notificationService';
 
 const SOCKET_URL = (import.meta as any).env?.VITE_SOCKET_URL || 'http://localhost:3002';
 let socket: Socket | null = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 1000; // Start with 1 second
+let reconnectTimeout: NodeJS.Timeout | null = null;
+let isManualDisconnect = false;
 
-export const connectSocket = (token: string) => {
-  if (socket && socket.connected) {
-    console.log('Socket already connected.');
-    return;
-  }
+const getToken = (): string | null => {
+  return localStorage.getItem('token');
+};
 
-  socket = io(SOCKET_URL, {
-    auth: {
-      token,
-    },
-    transports: ['websocket', 'polling'],
-  });
+const removeAllListeners = (socketInstance: Socket) => {
+  socketInstance.removeAllListeners('connect');
+  socketInstance.removeAllListeners('disconnect');
+  socketInstance.removeAllListeners('connect_error');
+  socketInstance.removeAllListeners('authenticated');
+  socketInstance.removeAllListeners('auth_error');
+  socketInstance.removeAllListeners('user_online');
+  socketInstance.removeAllListeners('user_offline');
+  socketInstance.removeAllListeners('new_message');
+  socketInstance.removeAllListeners('user_typing');
+  socketInstance.removeAllListeners('user_stopped_typing');
+  socketInstance.removeAllListeners('messages_read');
+  socketInstance.removeAllListeners('error');
+  socketInstance.removeAllListeners('reconnect');
+  socketInstance.removeAllListeners('reconnect_attempt');
+  socketInstance.removeAllListeners('reconnect_error');
+  socketInstance.removeAllListeners('reconnect_failed');
+};
 
-  // Authenticate immediately after connection
-  socket.on('connect', () => {
-    console.log('Socket connected:', socket?.id);
-    // Authenticate with the server
-    socket.emit('authenticate', { token });
-  });
-
-  socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason);
-  });
-
-  socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error.message);
-    if (error.message === "Authentication error: Invalid token" || error.message === "Authentication error: No token provided") {
-      store.dispatch(logout());
+const setupEventListeners = (socketInstance: Socket, token: string) => {
+  socketInstance.on('connect', () => {
+    reconnectAttempts = 0;
+    store.dispatch(setSocketConnected(true));
+    
+    if (socketInstance.connected) {
+      const currentToken = getToken();
+      if (currentToken) {
+        socketInstance.emit('authenticate', { token: currentToken });
+      }
     }
   });
 
-  // Handle authentication success
-  socket.on('authenticated', (data) => {
-    // Socket authenticated successfully
+  socketInstance.on('disconnect', (reason) => {
+    store.dispatch(setSocketConnected(false));
+    
+    if (!isManualDisconnect && reason !== 'io server disconnect') {
+      attemptReconnect();
+    }
   });
 
-  // Handle authentication error
-  socket.on('auth_error', (data) => {
+  socketInstance.on('connect_error', (error) => {
+    console.error('Socket connection error:', error.message);
+    store.dispatch(setSocketConnected(false));
+    
+    if (error.message.includes('Authentication error') || error.message.includes('Invalid token')) {
+      store.dispatch(logout());
+      isManualDisconnect = true;
+      return;
+    }
+    
+    if (!isManualDisconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      attemptReconnect();
+    } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      store.dispatch(setSocketConnected(false));
+    }
+  });
+
+  socketInstance.on('authenticated', (data) => {
+    reconnectAttempts = 0;
+    store.dispatch(setSocketConnected(true));
+  });
+
+  socketInstance.on('auth_error', (data) => {
+    console.error('Socket authentication error:', data.message);
+    store.dispatch(setSocketConnected(false));
     store.dispatch(logout());
+    isManualDisconnect = true;
   });
 
-  socket.on('user_online', (data) => {
-    // Check if current user wants to see online status
+  socketInstance.on('reconnect', (attemptNumber) => {
+    reconnectAttempts = 0;
+    store.dispatch(setSocketConnected(true));
+    
+    const currentToken = getToken();
+    if (currentToken) {
+      socketInstance.emit('authenticate', { token: currentToken });
+    }
+  });
+
+  socketInstance.on('reconnect_attempt', () => {
+  });
+
+  socketInstance.on('reconnect_error', () => {
+  });
+
+  socketInstance.on('reconnect_failed', () => {
+    store.dispatch(setSocketConnected(false));
+  });
+  socketInstance.on('user_online', (data) => {
     const settings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
     if (settings.onlineStatus !== false) {
       store.dispatch(updateUserStatus({ userId: data.userId, status: 'online' }));
     }
   });
 
-  socket.on('user_offline', (data) => {
-    // Check if current user wants to see online status
+  socketInstance.on('user_offline', (data) => {
     const settings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
     if (settings.onlineStatus !== false) {
       store.dispatch(updateUserStatus({ userId: data.userId, status: 'offline' }));
     }
   });
-
-  socket.on('new_message', (data) => {
+  socketInstance.on('new_message', (data) => {
     const message = data.message;
     store.dispatch(addMessage(message));
     
-    // Show notification if message is not from current user
     const currentUser = store.getState().auth.user;
     
     if (message.sender._id !== currentUser?._id) {
-      // Show browser notification
       const chatName = typeof message.chat === 'string' 
         ? 'Chat' 
         : message.chat.chatName;
@@ -86,32 +137,92 @@ export const connectSocket = (token: string) => {
     }
   });
 
-  socket.on('user_typing', (data: { chatId: string; userId: string; userName: string }) => {
-    // User typing
+  socketInstance.on('user_typing', (data: { chatId: string; userId: string; userName: string }) => {
     store.dispatch(addTypingUser(data));
   });
 
-  socket.on('user_stopped_typing', (data: { chatId: string; userId: string }) => {
-    // User stopped typing
+  socketInstance.on('user_stopped_typing', (data: { chatId: string; userId: string }) => {
     store.dispatch(removeTypingUser(data));
   });
 
-  socket.on('messages_read', (data: { chatId: string; messageIds: string[]; userId: string }) => {
-    // Messages read
-    // Message read status update
+  socketInstance.on('messages_read', () => {
   });
 
-  socket.on('error', (errorMessage: string) => {
-    // Socket error
-    // Handle specific errors, e.g., authentication failure
+  socketInstance.on('error', (errorMessage: string) => {
+    console.error('Socket error:', errorMessage);
   });
 };
 
-export const disconnectSocket = () => {
-  if (socket) {
+const attemptReconnect = () => {
+  if (isManualDisconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    return;
+  }
+
+  reconnectAttempts++;
+  const delay = Math.min(RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 30000);
+  
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+  }
+  
+  reconnectTimeout = setTimeout(() => {
+    const token = getToken();
+    if (token && socket) {
+      if (!socket.connected) {
+        socket.connect();
+      }
+    } else {
+      isManualDisconnect = true;
+    }
+  }, delay);
+};
+
+export const connectSocket = (token: string) => {
+  if (socket && socket.connected) {
+    return;
+  }
+
+  if (socket && !socket.connected) {
+    removeAllListeners(socket);
     socket.disconnect();
     socket = null;
   }
+
+  isManualDisconnect = false;
+  reconnectAttempts = 0;
+  
+  socket = io(SOCKET_URL, {
+    auth: {
+      token,
+    },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+    timeout: 20000,
+    forceNew: false,
+  });
+
+  setupEventListeners(socket, token);
+};
+
+export const disconnectSocket = () => {
+  isManualDisconnect = true;
+  
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  
+  if (socket) {
+    removeAllListeners(socket);
+    socket.disconnect();
+    socket = null;
+  }
+  
+  reconnectAttempts = 0;
+  store.dispatch(setSocketConnected(false));
 };
 
 export const emitUserOnline = () => {
@@ -133,15 +244,13 @@ export const emitUserOffline = () => {
 };
 
 export const joinChat = (chatId: string) => {
-  if (socket) {
-    console.log('Joining chat:', chatId);
+  if (socket && socket.connected) {
     socket.emit('join_chat', { chatId });
   }
 };
 
 export const leaveChat = (chatId: string) => {
-  if (socket) {
-    console.log('Leaving chat:', chatId);
+  if (socket && socket.connected) {
     socket.emit('leave_chat', { chatId });
   }
 };
@@ -154,29 +263,36 @@ export const sendSocketMessage = (data: {
   fileName?: string;
   fileSize?: number;
 }) => {
-  if (socket) {
-    console.log('Sending socket message:', data);
+  if (socket && socket.connected) {
     socket.emit('send_message', data);
   }
 };
 
 export const startTyping = (chatId: string) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit('typing_start', { chatId });
   }
 };
 
 export const stopTyping = (chatId: string) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit('typing_stop', { chatId });
   }
 };
 
 export const markMessagesRead = (data: { chatId: string; messageIds: string[] }) => {
-  if (socket) {
+  if (socket && socket.connected) {
     const settings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
     if (settings.readReceipts !== false) {
       socket.emit('mark_messages_read', data);
     }
   }
+};
+
+export const isSocketConnected = (): boolean => {
+  return socket !== null && socket.connected;
+};
+
+export const getSocket = (): Socket | null => {
+  return socket;
 };

@@ -8,6 +8,9 @@ export interface FileUploadResult {
   error?: string;
 }
 
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3002/api/v1';
+const SERVER_URL = (import.meta as any).env?.VITE_SOCKET_URL || 'http://localhost:3002';
+
 export const uploadFile = async (file: File): Promise<FileUploadResult> => {
   try {
     const formData = new FormData();
@@ -21,7 +24,7 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
       };
     }
 
-    const response = await fetch('http://localhost:3002/api/v1/upload/upload', {
+    const response = await fetch(`${API_BASE_URL}/upload/upload`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -34,7 +37,7 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
     if (data.status) {
       return {
         success: true,
-        fileUrl: `http://localhost:3002${data.fileData.fileUrl}`,
+        fileUrl: `${SERVER_URL}${data.fileData.fileUrl}`,
         fileName: data.fileData.fileName,
         fileSize: data.fileData.fileSize,
       };

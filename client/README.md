@@ -1,112 +1,48 @@
 # Chat Wave - Frontend (React)
 
-## Part 3: Frontend Foundation Complete ✅
+This is the React frontend for the Chat Wave application. It is built using TypeScript, Vite, Material UI, and Redux Toolkit.
 
-### Features Implemented:
-- ✅ React TypeScript setup with Vite
-- ✅ Material UI integration with custom CSS
-- ✅ Authentication system (Login/Register)
-- ✅ Protected routes
-- ✅ Redux Toolkit for state management
-- ✅ Socket.IO client integration with Redux
-- ✅ API service layer
-- ✅ Complete chat interface
-- ✅ Responsive layout
+## Key Features
 
-### Setup Instructions:
+- **Authentication:** JWT-based login, registration, profile updates, and protected route wrappers.
+- **Real-time Updates:** Full Socket.IO integration synchronized with Redux state for instant message delivery, typing indicators, and user presence tracking.
+- **State Management:** Predictable state container using Redux Toolkit, featuring async thunks for API calls.
+- **Modern UI:** Responsive layout styled with Material UI components and custom CSS, featuring clean chat channels and messaging views.
 
-1. **Create .env file** in the client directory:
-   ```env
-   VITE_API_URL=http://localhost:3002/api/v1
-   VITE_SOCKET_URL=http://localhost:3002
-   ```
-   
-   **Note:** The frontend runs on port 5173 (Vite default) and backend on port 3002.
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-### Project Structure:
+## Project Structure
 
 ```
 src/
 ├── components/
-│   ├── auth/
-│   │   ├── Login.tsx          # Login page
-│   │   ├── Register.tsx       # Registration page
-│   │   └── ProtectedRoute.tsx # Route protection
-│   ├── chat/
-│   │   └── ChatDashboard.tsx  # Main chat interface
-│   ├── layout/
-│   │   └── Layout.tsx         # App layout with header
-│   └── providers/
-│       ├── ReduxProvider.tsx  # Redux store provider
-│       └── SocketProvider.tsx # Socket.IO Redux integration
+│   ├── auth/          # Login, Registration, and ProtectedRoute components
+│   ├── chat/          # ChatDashboard and chat interface components
+│   ├── layout/        # Main layouts and navigation headers
+│   └── providers/     # Redux and Socket context providers
 ├── store/
-│   ├── slices/
-│   │   ├── authSlice.ts       # Authentication Redux slice
-│   │   └── chatSlice.ts       # Chat Redux slice
-│   ├── hooks.ts               # Typed Redux hooks
-│   └── store.ts               # Redux store configuration
-├── services/
-│   ├── api.ts                 # API service layer
-│   ├── socket.ts              # Socket.IO service
-│   └── socketRedux.ts         # Socket.IO Redux integration
-└── App.jsx                    # Main app component
+│   ├── slices/        # Auth and chat Redux state slices
+│   └── store.ts       # Redux store setup
+└── services/
+    ├── api.ts         # Axios instance and API call functions
+    └── socket.ts      # Socket.IO connection and event handlers
 ```
 
-### Key Features:
+## Setup & Run
 
-#### Authentication:
-- JWT-based authentication with Redux
-- Login/Register forms with validation
-- Protected routes
-- Automatic token management
-- User profile management
+### 1. Configure Environment Variables
+Create a `.env` file in the client directory:
+```env
+VITE_API_URL=http://localhost:3002/api/v1
+VITE_SOCKET_URL=http://localhost:3002
+```
+*Note: Make sure the values match the port/URL where your backend server is running.*
 
-#### Chat System:
-- Real-time messaging with Socket.IO + Redux
-- Online/offline status tracking
-- Chat creation and management
-- Message history
-- Typing indicators (ready for Part 4)
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-#### State Management:
-- Redux Toolkit for predictable state
-- Async thunks for API calls
-- Real-time state updates via Socket.IO
-- TypeScript support throughout
-
-#### UI/UX:
-- Material UI components with custom CSS
-- Responsive design
-- Modern and clean interface
-- Loading states and error handling
-- WhatsApp-style message bubbles
-
-### API Integration:
-- Axios for HTTP requests
-- Automatic token injection
-- Error handling and interceptors
-- TypeScript interfaces
-
-### Socket.IO Integration:
-- Real-time connection management
-- Redux integration for state updates
-- Event handling for messages
-- User presence tracking
-- Typing indicators
-
-### Next Steps (Part 4):
-- Complete chat interface
-- Real-time messaging UI
-- Message input and display
-- Online status indicators
-- Chat selection and navigation
+### 3. Start Development Server
+```bash
+npm run dev
+```
+The application will launch on `http://localhost:5173`.

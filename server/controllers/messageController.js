@@ -2,7 +2,6 @@ const MessageModel = require("../models/messageModel");
 const ChatModel = require("../models/chatModel");
 const UserModel = require("../models/userModel");
 
-// Send a message
 async function sendMessage(req, res) {
   try {
     const { content, chatId, messageType = 'text', fileUrl = '', fileName = '', fileSize = 0 } = req.body;
@@ -38,7 +37,6 @@ async function sendMessage(req, res) {
       });
     }
 
-    // Create new message
     const newMessage = await MessageModel.create({
       sender: senderId,
       content: content || '',
@@ -46,15 +44,14 @@ async function sendMessage(req, res) {
       messageType,
       fileUrl,
       fileName,
-      fileSize
+      fileSize,
+      readBy: [senderId]
     });
 
-    // Populate the message with sender details
     const message = await MessageModel.findById(newMessage._id)
       .populate("sender", "name email profile_img")
       .populate("chat");
 
-    // Update latest message in chat
     await ChatModel.findByIdAndUpdate(chatId, {
       latestMessage: newMessage._id
     });
@@ -65,7 +62,7 @@ async function sendMessage(req, res) {
       messageData: message
     });
   } catch (error) {
-    console.log("Error sending message:", error);
+    console.error("Error sending message:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -73,7 +70,6 @@ async function sendMessage(req, res) {
   }
 }
 
-// Get all messages for a chat
 async function getMessages(req, res) {
   try {
     const { chatId } = req.params;
@@ -102,9 +98,8 @@ async function getMessages(req, res) {
       });
     }
 
-    // Get messages with pagination
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
     const skip = (page - 1) * limit;
 
     const messages = await MessageModel.find({ chat: chatId })
@@ -114,7 +109,6 @@ async function getMessages(req, res) {
       .skip(skip)
       .limit(limit);
 
-    // Mark messages as read for current user
     await MessageModel.updateMany(
       { 
         chat: chatId, 
@@ -127,7 +121,7 @@ async function getMessages(req, res) {
     res.status(200).json({
       status: true,
       message: "Messages fetched successfully",
-      messages: messages.reverse(), // Reverse to show oldest first
+      messages: messages.reverse(),
       pagination: {
         page,
         limit,
@@ -135,7 +129,7 @@ async function getMessages(req, res) {
       }
     });
   } catch (error) {
-    console.log("Error fetching messages:", error);
+    console.error("Error fetching messages:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -143,7 +137,6 @@ async function getMessages(req, res) {
   }
 }
 
-// Mark messages as read
 async function markMessagesAsRead(req, res) {
   try {
     const { chatId } = req.body;
@@ -156,7 +149,6 @@ async function markMessagesAsRead(req, res) {
       });
     }
 
-    // Mark all unread messages in the chat as read
     const result = await MessageModel.updateMany(
       { 
         chat: chatId, 
@@ -172,7 +164,7 @@ async function markMessagesAsRead(req, res) {
       modifiedCount: result.modifiedCount
     });
   } catch (error) {
-    console.log("Error marking messages as read:", error);
+    console.error("Error marking messages as read:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -180,12 +172,15 @@ async function markMessagesAsRead(req, res) {
   }
 }
 
-// Get unread message count for a user
 async function getUnreadCount(req, res) {
   try {
     const userId = req.user.userId;
 
+    const userChats = await ChatModel.find({ users: { $in: [userId] } });
+    const chatIds = userChats.map(chat => chat._id);
+
     const unreadCount = await MessageModel.countDocuments({
+      chat: { $in: chatIds },
       readBy: { $nin: [userId] },
       sender: { $ne: userId }
     });
@@ -196,7 +191,7 @@ async function getUnreadCount(req, res) {
       unreadCount
     });
   } catch (error) {
-    console.log("Error fetching unread count:", error);
+    console.error("Error fetching unread count:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
@@ -204,16 +199,22 @@ async function getUnreadCount(req, res) {
   }
 }
 
-// Search messages
 async function searchMessages(req, res) {
   try {
     const { query, chatId } = req.query;
     const userId = req.user.userId;
 
-    if (!query) {
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return res.status(400).json({
         status: false,
         message: "Search query is required"
+      });
+    }
+
+    if (query.trim().length < 2) {
+      return res.status(400).json({
+        status: false,
+        message: "Search query must be at least 2 characters"
       });
     }
 
@@ -222,7 +223,6 @@ async function searchMessages(req, res) {
     };
 
     if (chatId) {
-      // Check if user is part of the chat
       const chat = await ChatModel.findById(chatId);
       if (!chat || !chat.users.includes(userId)) {
         return res.status(403).json({
@@ -232,7 +232,6 @@ async function searchMessages(req, res) {
       }
       searchFilter.chat = chatId;
     } else {
-      // Search in all user's chats
       const userChats = await ChatModel.find({ users: { $in: [userId] } });
       const chatIds = userChats.map(chat => chat._id);
       searchFilter.chat = { $in: chatIds };
@@ -251,7 +250,7 @@ async function searchMessages(req, res) {
       query
     });
   } catch (error) {
-    console.log("Error searching messages:", error);
+    console.error("Error searching messages:", error);
     res.status(500).json({
       status: false,
       message: "Internal server error"
