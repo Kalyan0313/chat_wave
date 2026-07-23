@@ -5,9 +5,9 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#6366f1', // Indigo-500 - Modern purple-blue
-      light: '#818cf8', // Indigo-400
-      dark: '#4f46e5', // Indigo-600
+      main: '#7c3aed', // Cyber Violet
+      light: '#a855f7',
+      dark: '#6d28d9',
       contrastText: '#ffffff',
     },
     secondary: {

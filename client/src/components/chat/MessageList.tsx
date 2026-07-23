@@ -214,30 +214,6 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading }) => {
                 />
 
               </Box>
-
-              {isOwnMessage && (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    ml: 1,
-                    minWidth: 40,
-                  }}
-                >
-                  {showAvatar ? (
-                    <Avatar
-                      src={user?.profile_img}
-                      alt={user?.name}
-                      sx={{ width: 32, height: 32 }}
-                    >
-                      {user?.name?.[0]}
-                    </Avatar>
-                  ) : (
-                    <Box sx={{ width: 32, height: 32 }} />
-                  )}
-                </Box>
-              )}
             </Box>
           </React.Fragment>
         );

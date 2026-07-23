@@ -30,17 +30,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [message]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -69,7 +60,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -142,9 +133,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleEmojiSelect = (emoji: string) => {
     setMessage(prev => prev + emoji);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,16 +162,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
         elevation={0}
         sx={{
           display: 'flex',
-          alignItems: 'flex-end',
-          p: 2,
+          alignItems: 'center',
+          p: '6px 10px',
           gap: 1,
-          borderRadius: 3,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'grey.200',
+          borderRadius: '24px',
+          backgroundColor: '#ffffff',
+          border: '1px solid rgba(226, 232, 240, 0.9)',
+          boxShadow: '0 8px 30px rgba(15, 23, 42, 0.08)',
+          transition: 'all 0.2s ease-in-out',
           '&:focus-within': {
-            borderColor: 'primary.main',
-            boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.1)',
+            borderColor: '#7c3aed',
+            boxShadow: '0 8px 30px rgba(124, 58, 237, 0.16)',
           }
         }}
       >
@@ -241,13 +230,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Message Input */}
       <TextField
-        ref={textareaRef}
         multiline
+        minRows={1}
         maxRows={4}
         placeholder="Type a message..."
         value={message}
         onChange={handleInputChange}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
         variant="outlined"
         size="small"
@@ -255,6 +244,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
           flexGrow: 1,
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
+            px: 1,
+            py: 0.5,
+            fontSize: '0.95rem',
+            color: '#0f172a',
             '& fieldset': {
               border: 'none',
             },
@@ -275,18 +268,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onClick={handleSendMessage}
             disabled={(!message.trim() && !selectedFile) || disabled || isUploading}
             sx={{
-              bgcolor: 'primary.main',
-              color: 'white',
-              borderRadius: 2,
+              backgroundColor: '#7c3aed',
+              color: '#ffffff',
+              borderRadius: '50px',
               width: 40,
               height: 40,
+              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
               '&:hover': {
-                bgcolor: 'primary.dark',
-                transform: 'scale(1.05)',
+                backgroundColor: '#6d28d9',
+                boxShadow: '0 6px 16px rgba(124, 58, 237, 0.4)',
+                transform: 'scale(1.04)',
               },
               '&:disabled': {
-                bgcolor: 'grey.300',
-                color: 'grey.500',
+                backgroundColor: '#cbd5e1',
+                color: '#94a3b8',
+                boxShadow: 'none',
               },
               transition: 'all 0.2s ease-in-out',
             }}

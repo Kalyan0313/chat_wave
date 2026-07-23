@@ -17,13 +17,18 @@ import {
   IconButton,
   Divider,
   Tooltip,
+  Button,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Menu as MenuIcon,
+  LockOutlined as LockIcon,
+  Bolt as BoltIcon,
+  InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import { ChatWaveLogo } from '../layout/ChatWaveLogo';
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -166,52 +171,103 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onMenuClick }) => {
 
   if (!currentChat) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Header for when no chat is selected */}
-        <Paper
-          elevation={1}
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#f5f3ff',
+          backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(248, 246, 255, 0.4) 0%, rgba(237, 233, 254, 0.7) 100%), url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%237c3aed' stroke-width='1.5' stroke-opacity='0.12' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='20' y='20' width='22' height='36' rx='5'/%3E%3Ccircle cx='31' cy='48' r='2.5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Cpath d='M110 24 c0-6 5-11 11-11 h22 c6 0 11 5 11 11 v14 c0 6-5 11-11 11 h-7 l-9 7 v-7 h-6 c-6 0-11-5-11-11 z'/%3E%3Cpath d='M20 115 l35-18 l-12 28 l6-12 l12 6 z'/%3E%3Cpath d='M115 115 h26 a4 4 0 0 0 4-4 v-16 a4 4 0 0 0-4-4 h-5 l-3-4 h-10 l-3 4 h-5 a4 4 0 0 0-4 4 v16 a4 4 0 0 0 4 4 z'/%3E%3Ccircle cx='128' cy='103' r='5'/%3E%3Cpath d='M75 25 v-18 h16 v18 M75 14 h16'/%3E%3Ccircle cx='70' cy='25' r='5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Ccircle cx='86' cy='25' r='5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Cpath d='M75 115 a6 6 0 0 1 8 0 a6 6 0 0 1 8 0 l-8 10 z'/%3E%3Cpath d='M75 70 l2 5 h5 l-4 3 l2 5 l-5-3 l-5 3 l2-5 l-4-3 h5 z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '180px 180px',
+        }}
+      >
+        {/* Mobile top header when no chat selected */}
+        <Box
           sx={{
             p: 2,
-            display: 'flex',
+            display: { xs: 'flex', md: 'none' },
             alignItems: 'center',
             gap: 2,
-            borderRadius: 0,
-            borderBottom: 1,
-            borderColor: 'divider',
+            borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
           }}
         >
-          {/* Mobile menu button */}
-          <IconButton 
-            onClick={onMenuClick} 
-            sx={{ display: { xs: 'block', md: 'none' } }}
-          >
+          <IconButton onClick={onMenuClick}>
             <MenuIcon />
           </IconButton>
-          
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" color="text.secondary">
-              Chat Wave
-            </Typography>
-          </Box>
-        </Paper>
+          <ChatWaveLogo size="small" color="#7c3aed" textColor="#0f172a" />
+        </Box>
 
-        {/* Empty state */}
+        {/* Telegram Web style floating glass card */}
         <Box
           sx={{
             flexGrow: 1,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             p: 3,
           }}
         >
-          <Typography variant="h5" color="text.secondary" gutterBottom>
-            Select a chat to start messaging
-          </Typography>
-          <Typography variant="body2" color="text.secondary" align="center">
-            Choose a conversation from the sidebar to begin chatting
-          </Typography>
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 4, sm: 5 },
+              borderRadius: '28px',
+              textAlign: 'center',
+              maxWidth: 440,
+              width: '100%',
+              backgroundColor: 'rgba(255, 255, 255, 0.92)',
+              backdropFilter: 'blur(24px)',
+              border: '1px solid rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 24px 60px rgba(124, 58, 237, 0.12), 0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            {/* Glowing Icon Wrapper */}
+            <Box
+              sx={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 2.5,
+                boxShadow: '0 8px 24px rgba(124, 58, 237, 0.15)',
+              }}
+            >
+              <ChatWaveLogo size="medium" color="#7c3aed" textColor="#0f172a" showText={false} />
+            </Box>
+
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 800,
+                color: '#0f172a',
+                mb: 1,
+                fontSize: { xs: '1.25rem', sm: '1.4rem' },
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Select a Chat to Start
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#64748b',
+                lineHeight: 1.6,
+                fontSize: '0.925rem',
+              }}
+            >
+              Choose a conversation from the sidebar to send messages, files, and voice notes instantly.
+            </Typography>
+          </Paper>
         </Box>
       </Box>
     );
@@ -324,8 +380,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onMenuClick }) => {
         </Box>
       </Box>
 
-      {/* Messages Area */}
-      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+      {/* Messages Area with Telegram Web Signature SVG Line Art Doodle Wallpaper */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflow: 'hidden',
+          backgroundColor: '#f5f3ff',
+          backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(248, 246, 255, 0.4) 0%, rgba(237, 233, 254, 0.7) 100%), url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%237c3aed' stroke-width='1.5' stroke-opacity='0.12' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='20' y='20' width='22' height='36' rx='5'/%3E%3Ccircle cx='31' cy='48' r='2.5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Cpath d='M110 24 c0-6 5-11 11-11 h22 c6 0 11 5 11 11 v14 c0 6-5 11-11 11 h-7 l-9 7 v-7 h-6 c-6 0-11-5-11-11 z'/%3E%3Cpath d='M20 115 l35-18 l-12 28 l6-12 l12 6 z'/%3E%3Cpath d='M115 115 h26 a4 4 0 0 0 4-4 v-16 a4 4 0 0 0-4-4 h-5 l-3-4 h-10 l-3 4 h-5 a4 4 0 0 0-4 4 v16 a4 4 0 0 0 4 4 z'/%3E%3Ccircle cx='128' cy='103' r='5'/%3E%3Cpath d='M75 25 v-18 h16 v18 M75 14 h16'/%3E%3Ccircle cx='70' cy='25' r='5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Ccircle cx='86' cy='25' r='5' fill='%237c3aed' fill-opacity='0.12'/%3E%3Cpath d='M75 115 a6 6 0 0 1 8 0 a6 6 0 0 1 8 0 l-8 10 z'/%3E%3Cpath d='M75 70 l2 5 h5 l-4 3 l2 5 l-5-3 l-5 3 l2-5 l-4-3 h5 z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '180px 180px',
+        }}
+      >
         <MessageList messages={messages} loading={loading} />
       </Box>
 
@@ -338,15 +403,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onMenuClick }) => {
         </Box>
       )}
 
-      <Divider />
-
-      {/* Message Input */}
-      <Box sx={{ p: 2 }}>
-        <MessageInput
-          onSendMessage={handleSendMessage}
-          onTyping={handleTyping}
-          disabled={loading}
-        />
+      {/* Message Input Container */}
+      <Box sx={{ p: { xs: 1.5, sm: 2 }, bgcolor: 'rgba(255, 255, 255, 0.95)', borderTop: '1px solid rgba(226, 232, 240, 0.8)' }}>
+        <Box sx={{ maxWidth: 860, mx: 'auto', width: '100%' }}>
+          <MessageInput
+            onSendMessage={handleSendMessage}
+            onTyping={handleTyping}
+            disabled={loading}
+          />
+        </Box>
       </Box>
 
     </Box>

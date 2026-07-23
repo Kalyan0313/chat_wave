@@ -6,6 +6,7 @@ import {
   Typography,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   ListItemAvatar,
   Avatar,
@@ -159,12 +160,9 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
-          mb: 3 
+          mb: 2.5 
         }}>
-          <Typography 
-            variant="h5"
-            sx={{ fontWeight: 700, color: 'text.primary' }}
-          >
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', fontSize: '1.25rem' }}>
             Messages
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -249,7 +247,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
             </Box>
             <List>
               {filteredUsers.map((userItem) => (
-                <ListItem
+                <ListItemButton
                   key={userItem._id}
                   onClick={() => handleCreateChat(userItem._id)}
                   sx={{
@@ -261,7 +259,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
                 >
                   <ListItemAvatar>
                     <Avatar src={userItem.profile_img} alt={userItem.name}>
-                      {userItem.name[0]}
+                      {userItem.name?.[0] || 'U'}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
@@ -281,7 +279,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
                     secondary={userItem.email}
                   />
                   <AddIcon color="primary" />
-                </ListItem>
+                </ListItemButton>
               ))}
             </List>
           </Box>
@@ -317,35 +315,33 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
                 const unreadCount = getUnreadCount(chat);
                 
                 return (
-                  <ListItem
+                  <ListItemButton
                     key={chat._id}
                     selected={currentChat?._id === chat._id}
                     onClick={() => handleChatSelect(chat)}
                     sx={{
-                      borderRadius: 2,
+                      borderRadius: 3,
                       mx: 1,
                       my: 0.5,
+                      px: 2,
+                      py: 1.25,
+                      transition: 'all 0.2s ease-in-out',
                       '&:hover': { 
-                        bgcolor: 'grey.50',
-                        transform: 'translateX(2px)',
-                        transition: 'all 0.2s ease-in-out'
+                        bgcolor: 'rgba(241, 245, 249, 0.8)',
                       },
                       '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        color: 'white',
+                        bgcolor: 'rgba(124, 58, 237, 0.12)',
+                        borderLeft: '4px solid #7c3aed',
                         '&:hover': {
-                          bgcolor: 'primary.dark',
+                          bgcolor: 'rgba(124, 58, 237, 0.16)',
                         },
                         '& .MuiListItemText-primary': {
-                          color: 'white',
+                          color: '#0f172a',
+                          fontWeight: 700,
                         },
                         '& .MuiListItemText-secondary': {
-                          color: 'rgba(255, 255, 255, 0.8)',
+                          color: '#64748b',
                         },
-                        '& .MuiChip-root': {
-                          bgcolor: 'rgba(255, 255, 255, 0.2)',
-                          color: 'white',
-                        }
                       },
                     }}
                   >
@@ -372,7 +368,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
                           src={getChatAvatar(chat)}
                           alt={getChatName(chat)}
                         >
-                          {chat.isGroupChat ? <GroupIcon /> : getChatName(chat)[0]}
+                          {chat.isGroupChat ? <GroupIcon /> : (getChatName(chat)?.[0] || 'C')}
                         </Avatar>
                       </Badge>
                     </ListItemAvatar>
@@ -415,7 +411,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect }) => {
                         </Typography>
                       }
                     />
-                  </ListItem>
+                  </ListItemButton>
                 );
               })
             )}

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { forgotPassword, clearError } from '../../store/slices/authSlice';
+import { ChatWaveLogo } from '../layout/ChatWaveLogo';
+import { AnimatedBackground } from '../layout/AnimatedBackground';
 import {
   Container,
   Paper,
@@ -11,492 +13,307 @@ import {
   Box,
   Alert,
   CircularProgress,
+  InputAdornment,
+  Divider,
 } from '@mui/material';
 import { 
-  Email as EmailIcon,
+  EmailOutlined as EmailIcon, 
   ArrowBack as ArrowBackIcon,
-  Chat as ChatIcon
+  CheckCircleOutlined as CheckCircleIcon,
+  SendOutlined as SendIcon,
 } from '@mui/icons-material';
 
-const ForgotPassword: React.FC = () => {
+interface ForgotPasswordProps {
+  embedded?: boolean;
+  onSwitchToLogin?: () => void;
+}
+
+const ForgotPassword: React.FC<ForgotPasswordProps> = ({ embedded = false, onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{email?: string}>({});
-  const [touched, setTouched] = useState<{email?: boolean}>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState('');
+
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.auth);
-  const navigate = useNavigate();
+  const { loading } = useAppSelector((state) => state.auth);
 
-  // Clear error when component unmounts
-  React.useEffect(() => {
-    return () => {
-      dispatch(clearError());
-    };
-  }, [dispatch]);
-
-  // Validation functions
-  const validateEmail = (email: string): string => {
-    if (!email.trim()) {
-      return 'Email is required';
-    }
+  const validateEmail = (emailVal: string): string => {
+    if (!emailVal.trim()) return 'Email address is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return 'Please enter a valid email address';
-    }
+    if (!emailRegex.test(emailVal)) return 'Please enter a valid email address';
     return '';
-  };
-
-  const validateForm = (): boolean => {
-    const emailError = validateEmail(email);
-    
-    setErrors({
-      email: emailError,
-    });
-    
-    setTouched({
-      email: true,
-    });
-    
-    return !emailError;
-  };
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setEmail(value);
-    
-    // Clear error when user starts typing
-    if (errors.email && value.trim()) {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  const handleEmailBlur = () => {
-    setTouched(prev => ({ ...prev, email: true }));
-    const error = validateEmail(email);
-    setErrors(prev => ({ ...prev, email: error }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(clearError());
-    
-    // Validate form before submission
-    if (!validateForm()) {
+    setError(null);
+
+    const err = validateEmail(email);
+    if (err) {
+      setEmailError(err);
       return;
     }
-    
+
     try {
       const result = await dispatch(forgotPassword({ email }));
-      
       if (forgotPassword.fulfilled.match(result)) {
         setIsSubmitted(true);
+      } else {
+        setError((result.payload as string) || 'Failed to send reset link.');
       }
-      // If rejected, the error will be handled by Redux and displayed in the UI
     } catch (err) {
-      console.error('Forgot password error:', err);
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 
-  if (isSubmitted) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          background: 'white',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              linear-gradient(
-                135deg,
-                white 0%,
-                white 50%,
-                #1e40af 50%,
-                #1e40af 100%
-              )
-            `,
-            clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-          }
-        }}
-      >
-        <Container component="main" maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: { xs: 4, sm: 5 }, 
-              width: '100%',
-              borderRadius: 2,
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+  const formContent = (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      }}
+    >
+      {/* Logo Brand */}
+      {!embedded && (
+        <Box sx={{ mb: 3 }}>
+          <ChatWaveLogo size="medium" color="#1e40af" textColor="#0f172a" />
+        </Box>
+      )}
+
+      {isSubmitted ? (
+        <Box sx={{ textAlign: 'center', width: '100%' }}>
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              backgroundColor: '#ecfdf5',
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 2,
             }}
           >
-            <Box
+            <CheckCircleIcon sx={{ fontSize: 36 }} />
+          </Box>
+
+          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a', mb: 1 }}>
+            Check your email
+          </Typography>
+
+          <Typography variant="body2" sx={{ color: '#64748b', mb: 3, lineHeight: 1.6 }}>
+            We've sent a password reset link to <strong>{email}</strong>
+          </Typography>
+
+          {onSwitchToLogin ? (
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={onSwitchToLogin}
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
+                py: 1.4,
+                borderRadius: '50px',
+                fontWeight: 700,
+                backgroundColor: '#1e293b',
+                textTransform: 'none',
+                '&:hover': { backgroundColor: '#0f172a' },
               }}
             >
-              {/* Logo/Brand */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  mb: 4,
-                }}
-              >
-                <ChatIcon sx={{ fontSize: 40, color: '#1e40af', mr: 1 }} />
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    fontWeight: 700, 
-                    color: '#1e40af',
-                    fontSize: { xs: '1.5rem', sm: '2rem' }
-                  }}
-                >
-                  Chat Wave
-                </Typography>
+              Return to Sign In
+            </Button>
+          ) : (
+            <Button
+              component={Link}
+              to="/login"
+              fullWidth
+              variant="contained"
+              sx={{
+                py: 1.4,
+                borderRadius: '50px',
+                fontWeight: 700,
+                backgroundColor: '#1e293b',
+                textTransform: 'none',
+                '&:hover': { backgroundColor: '#0f172a' },
+              }}
+            >
+              Return to Sign In
+            </Button>
+          )}
+        </Box>
+      ) : (
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
+          <Typography 
+            variant="h5" 
+            component="h1"
+            sx={{ 
+              fontWeight: 700, 
+              color: '#0f172a', 
+              mb: 0.5,
+              fontSize: { xs: '1.25rem', sm: '1.4rem' },
+              textAlign: 'center'
+            }}
+          >
+            Forgot Password?
+          </Typography>
+
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: '#64748b', 
+              mb: 3,
+              textAlign: 'center'
+            }}
+          >
+            Enter your email and we'll send you a link to reset your password
+          </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ width: '100%', mb: 3, borderRadius: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.75, display: 'block' }}>
+              Email Address
+            </Typography>
+            <TextField
+              fullWidth
+              id="email"
+              name="email"
+              placeholder="name@example.com"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError('');
+              }}
+              disabled={loading}
+              error={!!emailError}
+              helperText={emailError}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon sx={{ color: emailError ? '#ef4444' : '#64748b', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: '#f8fafc',
+                  '& fieldset': { borderColor: emailError ? '#ef4444' : '#cbd5e1' },
+                  '&:hover fieldset': { borderColor: emailError ? '#ef4444' : '#1e40af' },
+                  '&.Mui-focused fieldset': { borderColor: emailError ? '#ef4444' : '#1e40af', borderWidth: 2 },
+                },
+                '& .MuiInputBase-input': { py: 1.4, fontSize: '0.95rem', color: '#0f172a' },
+              }}
+            />
+          </Box>
+
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            disabled={loading}
+            sx={{ 
+              py: 1.4,
+              borderRadius: '50px',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              textTransform: 'none',
+              backgroundColor: '#1e293b',
+              boxShadow: '0 4px 14px 0 rgba(15, 23, 42, 0.25)',
+              '&:hover': {
+                backgroundColor: '#0f172a',
+                boxShadow: '0 6px 20px 0 rgba(15, 23, 42, 0.35)',
+              },
+            }}
+          >
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <span>Send Reset Link</span>
+                <SendIcon sx={{ fontSize: 18 }} />
               </Box>
+            )}
+          </Button>
 
-              {/* Success Message */}
-              <Box
-                sx={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: '50%',
-                  backgroundColor: '#10b981',
-                  display: 'flex',
+          <Divider sx={{ my: 2.5, color: '#94a3b8', fontSize: '0.8rem' }}>
+            Or
+          </Divider>
+
+          <Box textAlign="center">
+            {onSwitchToLogin ? (
+              <span
+                onClick={onSwitchToLogin}
+                style={{
+                  color: '#7c3aed',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  mb: 3,
+                  gap: '4px',
+                  fontSize: '0.9rem',
                 }}
               >
-                <EmailIcon sx={{ fontSize: 40, color: 'white' }} />
-              </Box>
-
-              <Typography 
-                component="h1" 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 700, 
-                  mb: 2,
-                  color: '#1e293b',
-                  fontSize: { xs: '1.5rem', sm: '2rem' }
-                }}
-              >
-                Check Your Email
-              </Typography>
-              
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: '#64748b', 
-                  mb: 4,
-                  fontWeight: 400,
-                  lineHeight: 1.6,
-                }}
-              >
-                We've sent a password reset link to <strong>{email}</strong>. 
-                Please check your email and follow the instructions to reset your password.
-              </Typography>
-
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#64748b', 
-                  mb: 4,
-                  fontWeight: 400,
-                }}
-              >
-                Didn't receive the email? Check your spam folder or try again.
-              </Typography>
-
-              {/* Back to Login Button */}
-              <Button
-                component={Link}
+                <ArrowBackIcon sx={{ fontSize: 16 }} />
+                Back to Sign In
+              </span>
+            ) : (
+              <Link
                 to="/login"
-                variant="contained"
-                sx={{ 
-                  mb: 2, 
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: 1,
-                  fontSize: '1rem',
+                style={{
+                  color: '#7c3aed',
+                  textDecoration: 'none',
                   fontWeight: 600,
-                  textTransform: 'none',
-                  backgroundColor: '#1e40af',
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.9rem',
                 }}
               >
-                <ArrowBackIcon sx={{ mr: 1, fontSize: 20 }} />
-                Back to Login
-              </Button>
+                <ArrowBackIcon sx={{ fontSize: 16 }} />
+                Back to Sign In
+              </Link>
+            )}
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
 
-              {/* Resend Email Button */}
-              <Button
-                onClick={() => {
-                  setIsSubmitted(false);
-                  setEmail('');
-                  setErrors({});
-                  setTouched({});
-                }}
-                variant="outlined"
-                sx={{ 
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: 1,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  borderColor: '#1e40af',
-                  color: '#1e40af',
-                  '&:hover': {
-                    borderColor: '#1d4ed8',
-                    backgroundColor: 'rgba(30, 64, 175, 0.04)',
-                  },
-                }}
-              >
-                Try Different Email
-              </Button>
-            </Box>
-          </Paper>
-        </Container>
-      </Box>
-    );
+  if (embedded) {
+    return formContent;
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'white',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `
-            linear-gradient(
-              135deg,
-              white 0%,
-              white 50%,
-              #1e40af 50%,
-              #1e40af 100%
-            )
-          `,
-          clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-        }
-      }}
-    >
-      <Container component="main" maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+    <AnimatedBackground>
+      <Container component="main" maxWidth="sm" sx={{ maxWidth: { sm: 480 }, width: '100%' }}>
         <Paper 
           elevation={0}
           sx={{ 
-            p: { xs: 4, sm: 5 }, 
+            p: { xs: 3.5, sm: 4.5 }, 
             width: '100%',
-            borderRadius: 2,
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+            borderRadius: 4,
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
-          >
-            {/* Logo/Brand */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
-              <ChatIcon sx={{ fontSize: 40, color: '#1e40af', mr: 1 }} />
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: '#1e40af',
-                  fontSize: { xs: '1.5rem', sm: '2rem' }
-                }}
-              >
-                Chat Wave
-              </Typography>
-            </Box>
-
-            {/* Header */}
-            <Typography 
-              component="h1" 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 800, 
-                mb: 1,
-                color: '#1e293b',
-                fontSize: { xs: '2rem', sm: '2.5rem' }
-              }}
-            >
-              Forgot Password?
-            </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#64748b', 
-                mb: 4,
-                fontWeight: 400,
-                opacity: 0.8
-              }}
-            >
-              No worries! Enter your email address and we'll send you a reset link.
-            </Typography>
-
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  width: '100%', 
-                  mb: 3,
-                  borderRadius: 2,
-                  '& .MuiAlert-message': {
-                    fontWeight: 500
-                  }
-                }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-              {/* Email Field */}
-              <TextField
-                margin="normal"
-                fullWidth
-                id="email"
-                label={
-                  <span>
-                    Your Email <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                }
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={handleEmailChange}
-                onBlur={handleEmailBlur}
-                disabled={loading}
-                error={touched.email && !!errors.email}
-                helperText={touched.email && errors.email}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
-                    '& fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#d1d5db',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                      borderWidth: 2,
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                    color: touched.email && errors.email ? '#ef4444' : '#374151',
-                    '&.Mui-focused': {
-                      color: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                    },
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#ef4444',
-                    fontSize: '0.75rem',
-                    marginTop: '4px',
-                  }
-                }}
-              />
-
-              {/* Send Reset Link Button */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ 
-                  mt: 3, 
-                  mb: 2, 
-                  py: 1.5,
-                  borderRadius: 1,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  backgroundColor: '#1e40af',
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
-                }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  <>
-                    Send Reset Link
-                    <EmailIcon sx={{ ml: 1, fontSize: 20 }} />
-                  </>
-                )}
-              </Button>
-
-              {/* Back to Login Link */}
-              <Box textAlign="center">
-                <Typography variant="body2" sx={{ color: '#6b7280', fontWeight: 400 }}>
-                  Remember your password?{' '}
-                  <Link
-                    to="/login"
-                    style={{
-                      color: '#1e40af',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.textDecoration = 'underline';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.textDecoration = 'none';
-                    }}
-                  >
-                    Sign in here
-                  </Link>
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+          {formContent}
         </Paper>
       </Container>
-    </Box>
+    </AnimatedBackground>
   );
 };
 

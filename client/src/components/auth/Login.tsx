@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { loginUser, clearError } from '../../store/slices/authSlice';
+import { ChatWaveLogo } from '../layout/ChatWaveLogo';
+import { AnimatedBackground } from '../layout/AnimatedBackground';
 import {
   Container,
   Paper,
@@ -13,19 +15,28 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  FormControlLabel,
+  Checkbox,
+  Divider,
 } from '@mui/material';
 import { 
-  Login as LoginIcon, 
-  Email as EmailIcon, 
-  Lock as LockIcon,
+  EmailOutlined as EmailIcon, 
+  LockOutlined as LockIcon,
   Visibility,
   VisibilityOff,
-  Chat as ChatIcon
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  embedded?: boolean;
+  onSwitchToRegister?: () => void;
+  onSwitchToForgotPassword?: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister, onSwitchToForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{email?: string; password?: string}>({});
   const [touched, setTouched] = useState<{email?: boolean; password?: boolean}>({});
@@ -49,19 +60,19 @@ const Login: React.FC = () => {
   }, [dispatch]);
 
   // Validation functions
-  const validateEmail = (email: string): string => {
-    if (!email.trim()) {
-      return 'Email is required';
+  const validateEmail = (emailVal: string): string => {
+    if (!emailVal.trim()) {
+      return 'Email address is required';
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(emailVal)) {
       return 'Please enter a valid email address';
     }
     return '';
   };
 
-  const validatePassword = (password: string): string => {
-    if (!password.trim()) {
+  const validatePassword = (passwordVal: string): string => {
+    if (!passwordVal.trim()) {
       return 'Password is required';
     }
     return '';
@@ -87,8 +98,6 @@ const Login: React.FC = () => {
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setEmail(value);
-    
-    // Clear error when user starts typing
     if (errors.email && value.trim()) {
       setErrors(prev => ({ ...prev, email: '' }));
     }
@@ -97,8 +106,6 @@ const Login: React.FC = () => {
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setPassword(value);
-    
-    // Clear error when user starts typing
     if (errors.password && value.trim()) {
       setErrors(prev => ({ ...prev, password: '' }));
     }
@@ -106,315 +113,372 @@ const Login: React.FC = () => {
 
   const handleEmailBlur = () => {
     setTouched(prev => ({ ...prev, email: true }));
-    const error = validateEmail(email);
-    setErrors(prev => ({ ...prev, email: error }));
+    const err = validateEmail(email);
+    setErrors(prev => ({ ...prev, email: err }));
   };
 
   const handlePasswordBlur = () => {
     setTouched(prev => ({ ...prev, password: true }));
-    const error = validatePassword(password);
-    setErrors(prev => ({ ...prev, password: error }));
+    const err = validatePassword(password);
+    setErrors(prev => ({ ...prev, password: err }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
     
-    // Validate form before submission
     if (!validateForm()) {
       return;
     }
     
     try {
       const result = await dispatch(loginUser({ email, password }));
-      
       if (loginUser.fulfilled.match(result)) {
         navigate('/chat');
       }
-      // If rejected, the error will be handled by Redux and displayed in the UI
     } catch (err) {
       console.error('Login error:', err);
     }
   };
 
-  return (
+  const formContent = (
     <Box
       sx={{
-        minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'white',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `
-            linear-gradient(
-              135deg,
-              white 0%,
-              white 50%,
-              #1e40af 50%,
-              #1e40af 100%
-            )
-          `,
-          clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-        }
+        width: '100%',
       }}
     >
+      {/* Logo Brand */}
+      {!embedded && (
+        <Box sx={{ mb: 3 }}>
+          <ChatWaveLogo size="medium" color="#1e40af" textColor="#0f172a" />
+        </Box>
+      )}
 
-      <Container component="main" maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+      {/* Title & Subtitle */}
+      <Typography 
+        variant="h5" 
+        component="h1"
+        sx={{ 
+          fontWeight: 700, 
+          color: '#0f172a', 
+          mb: 0.5,
+          fontSize: { xs: '1.25rem', sm: '1.4rem' },
+          textAlign: 'center'
+        }}
+      >
+        Welcome Back
+      </Typography>
+      
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          color: '#64748b', 
+          mb: 3,
+          textAlign: 'center'
+        }}
+      >
+        Sign in to continue to your conversations
+      </Typography>
+
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            width: '100%', 
+            mb: 3,
+            borderRadius: 2,
+            fontSize: '0.875rem',
+            '& .MuiAlert-message': {
+              fontWeight: 500
+            }
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
+        {/* Email Input */}
+        <Box sx={{ mb: 2.5 }}>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontWeight: 600, 
+              color: '#334155', 
+              mb: 0.75, 
+              display: 'block' 
+            }}
+          >
+            Email Address
+          </Typography>
+          <TextField
+            fullWidth
+            id="email"
+            name="email"
+            placeholder="name@example.com"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={handleEmailChange}
+            onBlur={handleEmailBlur}
+            disabled={loading}
+            error={touched.email && !!errors.email}
+            helperText={touched.email && errors.email}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailIcon sx={{ color: touched.email && errors.email ? '#ef4444' : '#64748b', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                backgroundColor: '#f8fafc',
+                '& fieldset': {
+                  borderColor: touched.email && errors.email ? '#ef4444' : '#cbd5e1',
+                },
+                '&:hover fieldset': {
+                  borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
+                  borderWidth: 2,
+                },
+              },
+              '& .MuiInputBase-input': {
+                py: 1.4,
+                fontSize: '0.95rem',
+                color: '#0f172a',
+              },
+            }}
+          />
+        </Box>
+
+        {/* Password Input */}
+        <Box sx={{ mb: 2 }}>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontWeight: 600, 
+              color: '#334155', 
+              mb: 0.75, 
+              display: 'block' 
+            }}
+          >
+            Password
+          </Typography>
+          <TextField
+            fullWidth
+            name="password"
+            id="password"
+            placeholder="••••••••"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={handlePasswordChange}
+            onBlur={handlePasswordBlur}
+            disabled={loading}
+            error={touched.password && !!errors.password}
+            helperText={touched.password && errors.password}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockIcon sx={{ color: touched.password && errors.password ? '#ef4444' : '#64748b', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                    size="small"
+                    sx={{ color: '#64748b' }}
+                  >
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                backgroundColor: '#f8fafc',
+                '& fieldset': {
+                  borderColor: touched.password && errors.password ? '#ef4444' : '#cbd5e1',
+                },
+                '&:hover fieldset': {
+                  borderColor: touched.password && errors.password ? '#ef4444' : '#1e40af',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: touched.password && errors.password ? '#ef4444' : '#1e40af',
+                  borderWidth: 2,
+                },
+              },
+              '& .MuiInputBase-input': {
+                py: 1.4,
+                fontSize: '0.95rem',
+                color: '#0f172a',
+              },
+            }}
+          />
+        </Box>
+
+        {/* Options Row: Remember Me & Forgot Password */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            mb: 2.5,
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                size="small"
+                sx={{
+                  color: '#94a3b8',
+                  '&.Mui-checked': {
+                    color: '#1e40af',
+                  },
+                }}
+              />
+            }
+            label={
+              <Typography variant="body2" sx={{ color: '#475569', fontSize: '0.85rem' }}>
+                Remember me
+              </Typography>
+            }
+          />
+          
+          {onSwitchToForgotPassword ? (
+            <span
+              onClick={onSwitchToForgotPassword}
+              style={{
+                color: '#7c3aed',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+              }}
+            >
+              Forgot password?
+            </span>
+          ) : (
+            <Link
+              to="/forgot-password"
+              style={{
+                color: '#7c3aed',
+                textDecoration: 'none',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+              }}
+            >
+              Forgot password?
+            </Link>
+          )}
+        </Box>
+
+        {/* Submit Action Button */}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          disabled={loading}
+          sx={{ 
+            py: 1.4,
+            borderRadius: '50px',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            textTransform: 'none',
+            backgroundColor: '#1e293b',
+            boxShadow: '0 4px 14px 0 rgba(15, 23, 42, 0.25)',
+            '&:hover': {
+              backgroundColor: '#0f172a',
+              boxShadow: '0 6px 20px 0 rgba(15, 23, 42, 0.35)',
+            },
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          {loading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span>Sign In</span>
+              <ArrowForwardIcon sx={{ fontSize: 18 }} />
+            </Box>
+          )}
+        </Button>
+
+        {/* Divider */}
+        <Divider sx={{ my: 2.5, color: '#94a3b8', fontSize: '0.8rem' }}>
+          Account Navigation
+        </Divider>
+
+        {/* Sign Up Link */}
+        <Box textAlign="center">
+          <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.9rem' }}>
+            Don't have an account?{' '}
+            {onSwitchToRegister ? (
+              <span
+                onClick={onSwitchToRegister}
+                style={{
+                  color: '#1e40af',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                Create account
+              </span>
+            ) : (
+              <Link
+                to="/register"
+                style={{
+                  color: '#1e40af',
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                }}
+              >
+                Create account
+              </Link>
+            )}
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  if (embedded) {
+    return formContent;
+  }
+
+  return (
+    <AnimatedBackground>
+      <Container component="main" maxWidth="sm" sx={{ maxWidth: { sm: 480 }, width: '100%' }}>
         <Paper 
           elevation={0}
           sx={{ 
-            p: { xs: 4, sm: 5 }, 
+            p: { xs: 3.5, sm: 4.5 }, 
             width: '100%',
-            borderRadius: 2,
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+            borderRadius: 4,
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
-          >
-            {/* Logo/Brand */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
-              <ChatIcon sx={{ fontSize: 40, color: '#1e40af', mr: 1 }} />
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: '#1e40af',
-                  fontSize: { xs: '1.5rem', sm: '2rem' }
-                }}
-              >
-                Chat Wave
-              </Typography>
-            </Box>
-
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  width: '100%', 
-                  mb: 3,
-                  borderRadius: 2,
-                  '& .MuiAlert-message': {
-                    fontWeight: 500
-                  }
-                }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-              {/* Email Field */}
-              <TextField
-                margin="normal"
-                fullWidth
-                id="email"
-                label={
-                  <span>
-                    Your Email <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                }
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={handleEmailChange}
-                onBlur={handleEmailBlur}
-                disabled={loading}
-                error={touched.email && !!errors.email}
-                helperText={touched.email && errors.email}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
-                    '& fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#d1d5db',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                      borderWidth: 2,
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                    color: touched.email && errors.email ? '#ef4444' : '#374151',
-                    '&.Mui-focused': {
-                      color: touched.email && errors.email ? '#ef4444' : '#1e40af',
-                    },
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#ef4444',
-                    fontSize: '0.75rem',
-                    marginTop: '4px',
-                  }
-                }}
-              />
-
-              {/* Password Field */}
-              <TextField
-                margin="normal"
-                fullWidth
-                name="password"
-                label={
-                  <span>
-                    Password <span style={{ color: '#ef4444' }}>*</span>
-                  </span>
-                }
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={handlePasswordChange}
-                onBlur={handlePasswordBlur}
-                disabled={loading}
-                error={touched.password && !!errors.password}
-                helperText={touched.password && errors.password}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        sx={{ color: '#6b7280' }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
-                    '& fieldset': {
-                      borderColor: touched.password && errors.password ? '#ef4444' : '#d1d5db',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: touched.password && errors.password ? '#ef4444' : '#1e40af',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: touched.password && errors.password ? '#ef4444' : '#1e40af',
-                      borderWidth: 2,
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                    color: touched.password && errors.password ? '#ef4444' : '#374151',
-                    '&.Mui-focused': {
-                      color: touched.password && errors.password ? '#ef4444' : '#1e40af',
-                    },
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#ef4444',
-                    fontSize: '0.75rem',
-                    marginTop: '4px',
-                  }
-                }}
-              />
-
-              {/* Forgot Password Link */}
-              <Box textAlign="right" sx={{ mt: 1 }}>
-                <Link
-                  to="/forgot-password"
-                  style={{
-                    color: '#1e40af',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.textDecoration = 'underline';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.textDecoration = 'none';
-                  }}
-                >
-                  Forgot your password?
-                </Link>
-              </Box>
-
-              {/* Sign In Button */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ 
-                  mt: 3, 
-                  mb: 2, 
-                  py: 1.5,
-                  borderRadius: 1,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  backgroundColor: '#1e40af',
-                  '&:hover': {
-                    backgroundColor: '#1d4ed8',
-                  },
-                }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  <>
-                    Sign In
-                    <LoginIcon sx={{ ml: 1, fontSize: 20 }} />
-                  </>
-                )}
-              </Button>
-
-              {/* Sign Up Link */}
-              <Box textAlign="center">
-                <Typography variant="body2" sx={{ color: '#6b7280', fontWeight: 400 }}>
-                  New to Chat Wave?{' '}
-                  <Link
-                    to="/register"
-                    style={{
-                      color: '#1e40af',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.textDecoration = 'underline';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.textDecoration = 'none';
-                    }}
-                  >
-                    Create your free account now!
-                  </Link>
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+          {formContent}
         </Paper>
       </Container>
-
-    </Box>
+    </AnimatedBackground>
   );
 };
 

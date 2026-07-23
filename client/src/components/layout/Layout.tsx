@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
+import { ChatWaveLogo } from './ChatWaveLogo';
 import {
   AppBar,
   Toolbar,
@@ -53,50 +54,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Modern Header */}
+      {/* Modern Compact Header */}
       <AppBar 
         position="static" 
         elevation={0}
         sx={{ 
-          bgcolor: 'background.paper',
-          borderBottom: '1px solid',
-          borderColor: 'grey.200',
+          bgcolor: '#ffffff',
+          borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
         }}
       >
         <Toolbar sx={{ 
           justifyContent: 'space-between',
-          minHeight: '64px !important',
+          minHeight: '56px !important',
           px: { xs: 2, sm: 3 }
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2,
-                bgcolor: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: '1.2rem',
-              }}
-            >
-              CW
-            </Box>
-            <Typography 
-              variant="h5" 
-              component="div"
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.primary',
-                display: { xs: 'none', sm: 'block' }
-              }}
-            >
-              Chat Wave
-            </Typography>
-          </Box>
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <ChatWaveLogo size="small" color="#7c3aed" textColor="#0f172a" />
+          </Link>
           
           {/* User Profile */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

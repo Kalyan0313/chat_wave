@@ -7,11 +7,9 @@ import SocketProvider from './components/providers/SocketProvider';
 import AuthInitializer from './components/auth/AuthInitializer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
-import Login from './components/auth/Login';
-import Register from './components/auth/Register';
-import ForgotPassword from './components/auth/ForgotPassword';
 import ChatDashboard from './components/chat/ChatDashboard';
 import Profile from './components/profile/Profile';
+import LandingPage from './components/landing/LandingPage';
 import theme from './theme';
 import notificationService from './services/notificationService';
 
@@ -28,10 +26,8 @@ function App() {
           <AuthInitializer />
           <Router>
             <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+              {/* Public landing route with modal auth */}
+              <Route path="/" element={<LandingPage />} />
               
               {/* Protected routes */}
               <Route
@@ -56,8 +52,8 @@ function App() {
                 }
               />
               
-              {/* Default redirect */}
-              <Route path="/" element={<Navigate to="/chat" replace />} />
+              {/* Catch-all fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Router>
         </SocketProvider>

@@ -66,7 +66,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             }}
             onClick={handleDownload}
             onError={(e) => {
-              e.target.style.display = 'none';
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
             }}
           />
           {message.content && (
@@ -142,54 +142,78 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <Box sx={{ width: '100%', minWidth: 0 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: isOwn ? 'flex-end' : 'flex-start',
+        width: '100%',
+      }}
+    >
       <Paper
         elevation={0}
         sx={{
-          p: 2,
-          borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-          bgcolor: isOwn ? 'primary.main' : 'background.paper',
-          color: isOwn ? 'white' : 'text.primary',
-          border: isOwn ? 'none' : '1px solid',
-          borderColor: 'grey.200',
-          boxShadow: isOwn 
-            ? '0 2px 8px rgba(99, 102, 241, 0.3)' 
-            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+          p: '8px 14px 6px 14px',
+          borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+          backgroundImage: isOwn
+            ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'
+            : 'none',
+          backgroundColor: isOwn ? '#7c3aed' : '#ffffff',
+          color: isOwn ? '#ffffff' : '#0f172a',
+          boxShadow: isOwn
+            ? '0 3px 12px rgba(124, 58, 237, 0.22)'
+            : '0 2px 8px rgba(15, 23, 42, 0.06)',
+          border: isOwn ? 'none' : '1px solid rgba(226, 232, 240, 0.9)',
+          maxWidth: '100%',
+          position: 'relative',
+          wordBreak: 'break-word',
           overflow: 'hidden',
-          wordWrap: 'break-word',
-          minWidth: 0
         }}
       >
+        {/* Message Content */}
         {renderMessageContent()}
-      </Paper>
 
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: isOwn ? 'flex-end' : 'flex-start',
-          alignItems: 'center',
-          gap: 0.5,
-          mt: 0.5,
-          px: 1,
-        }}
-      >
-        <Typography variant="caption" color="text.secondary">
-          {formatTime(message.createdAt)}
-        </Typography>
-        
-        {isOwn && (
-          <Chip
-            size="small"
-            label={message.readBy?.length > 1 ? 'Read' : 'Sent'}
+        {/* Telegram Web Embedded Time & Read Status */}
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.4,
+            float: 'right',
+            ml: 2,
+            mt: 0.4,
+            mb: -0.1,
+            userSelect: 'none',
+          }}
+        >
+          <Typography
+            variant="caption"
             sx={{
-              height: 16,
-              fontSize: '0.7rem',
-              bgcolor: message.readBy?.length > 1 ? 'success.light' : 'grey.300',
-              color: message.readBy?.length > 1 ? 'success.contrastText' : 'grey.600',
+              fontSize: '0.675rem',
+              color: isOwn ? 'rgba(255, 255, 255, 0.75)' : '#94a3b8',
+              fontWeight: 500,
+              lineHeight: 1,
             }}
-          />
-        )}
-      </Box>
+          >
+            {formatTime(message.createdAt)}
+          </Typography>
+
+          {isOwn && (
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                color: message.readBy?.length > 1 ? '#4ade80' : 'rgba(255, 255, 255, 0.85)',
+                lineHeight: 1,
+                ml: 0.2,
+              }}
+            >
+              {message.readBy?.length > 1 ? '✓✓' : '✓'}
+            </Typography>
+          )}
+        </Box>
+      </Paper>
     </Box>
   );
 };
